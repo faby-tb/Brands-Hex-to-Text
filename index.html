@@ -263,10 +263,10 @@
 
   <label class="detector-label" for="detectorResult">Cofres:</label>
   <div id="detectorResult" class="detector-result" aria-live="polite" aria-atomic="true">Aun no hay resultados.</div>
- 
+ <!--
   <label class="detector-label" for="detectorResult">Etc..:</label>
   <div id="output" class="output" aria-live="polite" aria-label="ASCII output"></div>
-
+-->
   <script>
     /*
       Minimal MD5 implementation in JavaScript
@@ -640,8 +640,8 @@
     convertBtn.addEventListener("click", () => {
       const hexValue = hexInput.value.trim();
       errorMsg.textContent = "";
-      output.textContent = "";
       detectorResult.textContent = "Detecting...";
+      output.textContent = "";
 
       if (!hexValue) {
         errorMsg.textContent = "Please enter a hexadecimal string.";
@@ -664,8 +664,8 @@
 
       try {
         const ascii = hexToAscii(cleanHex);
-        output.textContent = ascii;
         detectorResult.textContent = detectTextType(ascii);
+        output.textContent = ascii;
       } catch (e) {
         errorMsg.textContent = e.message;
         detectorResult.textContent = "";
