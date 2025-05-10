@@ -455,11 +455,11 @@
         hexInput.disabled = false;
         convertBtn.disabled = false;
       } else {
+        errorMsg.textContent = "Invalid Key. Please enter the correct access key.";
         hexInput.disabled = true;
         convertBtn.disabled = true;
         output.textContent = "";
         detectorResult.textContent = "";
-        errorMsg.textContent = "Invalid Key. Please enter the correct access key.";
       }
     });
 
