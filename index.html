@@ -445,7 +445,7 @@
         errorMsg.textContent = "Insert Key.";
         hexInput.disabled = true;
         convertBtn.disabled = true;
-        output.textContent = "";
+        //output.textContent = "";
         detectorResult.textContent = "";
         return;
       }
@@ -458,7 +458,7 @@
         errorMsg.textContent = "Invalid Key. Please enter the correct access key.";
         hexInput.disabled = true;
         convertBtn.disabled = true;
-        output.textContent = "";
+        //output.textContent = "";
         detectorResult.textContent = "";
       }
     });
@@ -641,11 +641,11 @@
       const hexValue = hexInput.value.trim();
       errorMsg.textContent = "";
       detectorResult.textContent = "Detecting...";
-      output.textContent = "";
+      //output.textContent = "";
 
       if (!hexValue) {
         errorMsg.textContent = "Please enter a hexadecimal string.";
-        detectorResult.textContent = "";
+        detectorResult.textContent = "";F
         return;
       }
       if (!isValidHex(hexValue)) {
@@ -665,7 +665,7 @@
       try {
         const ascii = hexToAscii(cleanHex);
         detectorResult.textContent = detectTextType(ascii);
-        output.textContent = ascii;
+        //output.textContent = ascii;
       } catch (e) {
         errorMsg.textContent = e.message;
         detectorResult.textContent = "";
