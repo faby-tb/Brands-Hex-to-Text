@@ -442,7 +442,7 @@
     keyInput.addEventListener("input", () => {
       const enteredKey = keyInput.value.trim();
       if (enteredKey.length === 0) {
-        errorMsg.textContent = "";
+        errorMsg.textContent = "Insert Key.";
         hexInput.disabled = true;
         convertBtn.disabled = true;
         output.textContent = "";
