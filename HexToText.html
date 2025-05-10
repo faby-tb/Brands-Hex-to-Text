@@ -3,9 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Hex to ASCII Converter with Customized Keyword & Layer Detection</title>
+  <title>Protected Hex to ASCII Converter</title>
   <style>
-    /* Reset some basic styles */
+    /* Reset and base styles */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 600px;
+      min-height: 100vh;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 {
+      margin-bottom: 10px;
+      font-weight: 700;
+      font-size: 1.8rem;
+      text-align: center;
+      letter-spacing: 1.2px;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    }
+    label {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+    input[type="password"], textarea {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-family: monospace;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #e0e0e0;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.25);
+      transition: background-color 0.3s ease;
+      margin-bottom: 12px;
+    }
+    input[type="password"]:focus, textarea:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    button {
+      margin-top: 5px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.6);
+      transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      width: 100%;
+    }
+    button:hover,
+    button:focus {
+      background: #5562d9;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(85,98,217,0.8);
+      outline: none;
+    }
+    .output, .detector-result {
+      margin-top: 15px;
+      width: 100%;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 1rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+      user-select: text;
+      color: #f0f0f0;
+      min-height: 40px;
+    }
+    .error {
+      margin-top: 12px;
+      color: #ff6b6b;
+      font-weight: 700;
+      text-align: center;
+      min-height: 1.2em;
+    }
+    @media (max-width: 400px) {
+      body {
+        padding: 15px 10px;
+        max-width: 100%;
+      }
+      textarea, input[type="password"] {
+        height: 80px;
+        font-size: 0.9rem;
+      }
+      button {
+        font-size: 0.9rem;
+      }
+      .output, .detector-result {
+        font-size: 0.9rem;
+        min-height: auto;
+      }
+    }
     * {
       box-sizing: border-box;
     }
@@ -142,10 +250,15 @@
 </head>
 <body>
   <h1>Brand of Sacrifice Golden Ticket</h1>
-  <label for="hexInput">Insertar HEX:</label>
-  <textarea id="hexInput" placeholder="Ejemplo: 41 56 41 5F 54 45 4D 50 4C 45 5F 53 54 41 52 54 5F 46 69 72 73 74 5F 4C 65 76 65 6C 5F 30 31 00 00 A0 40 00 00 20 C2 00 00 A0 40 00 00 00 00 00 01 00 00 00 08 4C 61 79 65 72 5F 30 33 0F 69 6E 73 74 61 6E 63 65 73 6C 6F 74 5F 30 31 1A 41 56 41 5F 54 45 4D"></textarea>
 
-  <button id="convertBtn">Convertir</button>
+  <label for="keyInput">Key:</label>
+  <input type="password" id="keyInput" placeholder="Enter your key"/>
+
+  <label for="hexInput">Insertar HEX:</label>
+  <textarea id="hexInput" placeholder="Example: 48656c6c6f20576f726c6421" disabled></textarea>
+
+  <button id="convertBtn" disabled>Converir</button>
+
   <div id="errorMsg" class="error" role="alert" aria-live="assertive"></div>
 
   <label class="detector-label" for="detectorResult">Cofres:</label>
@@ -154,43 +267,230 @@
   <label class="detector-label" for="detectorResult">Etc..:</label>
   <div id="output" class="output" aria-live="polite" aria-label="ASCII output"></div>
 
-  
-
   <script>
-    const hexInput = document.getElementById('hexInput');
-    const convertBtn = document.getElementById('convertBtn');
-    const output = document.getElementById('output');
-    const errorMsg = document.getElementById('errorMsg');
-    const detectorResult = document.getElementById('detectorResult');
+    /*
+      Minimal MD5 implementation in JavaScript
+      Source: https://www.webtoolkit.info/javascript-md5.html
+    */
+    function md5(string) {
+      function RotateLeft(lValue, iShiftBits) {
+        return (lValue<<iShiftBits) | (lValue>>>(32-iShiftBits));
+      }
+      function AddUnsigned(lX,lY) {
+        var lX4,lY4,lX8,lY8,lResult;
+        lX8 = (lX & 0x80000000);
+        lY8 = (lY & 0x80000000);
+        lX4 = (lX & 0x40000000);
+        lY4 = (lY & 0x40000000);
+        lResult = (lX & 0x3FFFFFFF)+(lY & 0x3FFFFFFF);
+        if (lX4 & lY4) return (lResult ^ 0x80000000 ^ lX8 ^ lY8);
+        if (lX4 | lY4) {
+          if (lResult & 0x40000000) return (lResult ^ 0xC0000000 ^ lX8 ^ lY8);
+          else return (lResult ^ 0x40000000 ^ lX8 ^ lY8);
+        } else {
+          return (lResult ^ lX8 ^ lY8);
+        }
+      }
+      function F(x,y,z) { return (x & y) | ((~x) & z); }
+      function G(x,y,z) { return (x & z) | (y & (~z)); }
+      function H(x,y,z) { return (x ^ y ^ z); }
+      function I(x,y,z) { return (y ^ (x | (~z))); }
+      function FF(a,b,c,d,x,s,ac) {
+        a = AddUnsigned(a, AddUnsigned(AddUnsigned(F(b, c, d), x), ac));
+        return AddUnsigned(RotateLeft(a, s), b);
+      }
+      function GG(a,b,c,d,x,s,ac) {
+        a = AddUnsigned(a, AddUnsigned(AddUnsigned(G(b, c, d), x), ac));
+        return AddUnsigned(RotateLeft(a, s), b);
+      }
+      function HH(a,b,c,d,x,s,ac) {
+        a = AddUnsigned(a, AddUnsigned(AddUnsigned(H(b, c, d), x), ac));
+        return AddUnsigned(RotateLeft(a, s), b);
+      }
+      function II(a,b,c,d,x,s,ac) {
+        a = AddUnsigned(a, AddUnsigned(AddUnsigned(I(b, c, d), x), ac));
+        return AddUnsigned(RotateLeft(a, s), b);
+      }
+      function ConvertToWordArray(string) {
+        var lWordCount;
+        var lMessageLength = string.length;
+        var lNumberOfWords_temp1=lMessageLength + 8;
+        var lNumberOfWords_temp2=(lNumberOfWords_temp1 - (lNumberOfWords_temp1 % 64))/64;
+        var lNumberOfWords = (lNumberOfWords_temp2+1)*16;
+        var lWordArray=Array(lNumberOfWords-1);
+        var lBytePosition = 0;
+        var lByteCount = 0;
+        while (lByteCount < lMessageLength) {
+          lWordCount = (lByteCount - (lByteCount % 4))/4;
+          lBytePosition = (lByteCount % 4)*8;
+          lWordArray[lWordCount] = (lWordArray[lWordCount] | (string.charCodeAt(lByteCount)<<lBytePosition)) || 0;
+          lByteCount++;
+        }
+        lWordCount = (lByteCount - (lByteCount % 4))/4;
+        lBytePosition = (lByteCount % 4)*8;
+        lWordArray[lWordCount] = lWordArray[lWordCount] | (0x80<<lBytePosition);
+        lWordArray[lNumberOfWords-2] = lMessageLength<<3;
+        lWordArray[lNumberOfWords-1] = lMessageLength>>>29;
+        return lWordArray;
+      }
+      function WordToHex(lValue) {
+        var WordToHexValue="",WordToHexValue_temp="",lByte,lCount;
+        for (lCount = 0; lCount<=3; lCount++) {
+          lByte = (lValue>>>(lCount*8)) & 255;
+          WordToHexValue_temp = "0" + lByte.toString(16);
+          WordToHexValue += WordToHexValue_temp.substr(WordToHexValue_temp.length-2,2);
+        }
+        return WordToHexValue;
+      }
+      var x=Array();
+      var k,AA,BB,CC,DD,a,b,c,d;
+      var S11=7, S12=12, S13=17, S14=22;
+      var S21=5, S22=9 , S23=14, S24=20;
+      var S31=4, S32=11, S33=16, S34=23;
+      var S41=6, S42=10, S43=15, S44=21;
+      string = unescape(encodeURIComponent(string));
+      x = ConvertToWordArray(string);
+      a = 0x67452301;
+      b = 0xEFCDAB89;
+      c = 0x98BADCFE;
+      d = 0x10325476;
+      for (k=0; k<x.length; k+=16) {
+        AA=a; BB=b; CC=c; DD=d;
+        a=FF(a,b,c,d,x[k+0], S11,0xD76AA478);
+        d=FF(d,a,b,c,x[k+1], S12,0xE8C7B756);
+        c=FF(c,d,a,b,x[k+2], S13,0x242070DB);
+        b=FF(b,c,d,a,x[k+3], S14,0xC1BDCEEE);
+        a=FF(a,b,c,d,x[k+4], S11,0xF57C0FAF);
+        d=FF(d,a,b,c,x[k+5], S12,0x4787C62A);
+        c=FF(c,d,a,b,x[k+6], S13,0xA8304613);
+        b=FF(b,c,d,a,x[k+7], S14,0xFD469501);
+        a=FF(a,b,c,d,x[k+8], S11,0x698098D8);
+        d=FF(d,a,b,c,x[k+9], S12,0x8B44F7AF);
+        c=FF(c,d,a,b,x[k+10],S13,0xFFFF5BB1);
+        b=FF(b,c,d,a,x[k+11],S14,0x895CD7BE);
+        a=FF(a,b,c,d,x[k+12],S11,0x6B901122);
+        d=FF(d,a,b,c,x[k+13],S12,0xFD987193);
+        c=FF(c,d,a,b,x[k+14],S13,0xA679438E);
+        b=FF(b,c,d,a,x[k+15],S14,0x49B40821);
+        a=GG(a,b,c,d,x[k+1], S21,0xF61E2562);
+        d=GG(d,a,b,c,x[k+6], S22,0xC040B340);
+        c=GG(c,d,a,b,x[k+11],S23,0x265E5A51);
+        b=GG(b,c,d,a,x[k+0], S24,0xE9B6C7AA);
+        a=GG(a,b,c,d,x[k+5], S21,0xD62F105D);
+        d=GG(d,a,b,c,x[k+10],S22,0x2441453);
+        c=GG(c,d,a,b,x[k+15],S23,0xD8A1E681);
+        b=GG(b,c,d,a,x[k+4], S24,0xE7D3FBC8);
+        a=GG(a,b,c,d,x[k+9], S21,0x21E1CDE6);
+        d=GG(d,a,b,c,x[k+14],S22,0xC33707D6);
+        c=GG(c,d,a,b,x[k+3], S23,0xF4D50D87);
+        b=GG(b,c,d,a,x[k+8], S24,0x455A14ED);
+        a=GG(a,b,c,d,x[k+13],S21,0xA9E3E905);
+        d=GG(d,a,b,c,x[k+2], S22,0xFCEFA3F8);
+        c=GG(c,d,a,b,x[k+7], S23,0x676F02D9);
+        b=GG(b,c,d,a,x[k+12],S24,0x8D2A4C8A);
+        a=HH(a,b,c,d,x[k+5], S31,0xFFFA3942);
+        d=HH(d,a,b,c,x[k+8], S32,0x8771F681);
+        c=HH(c,d,a,b,x[k+11],S33,0x6D9D6122);
+        b=HH(b,c,d,a,x[k+14],S34,0xFDE5380C);
+        a=HH(a,b,c,d,x[k+1], S31,0xA4BEEA44);
+        d=HH(d,a,b,c,x[k+4], S32,0x4BDECFA9);
+        c=HH(c,d,a,b,x[k+7], S33,0xF6BB4B60);
+        b=HH(b,c,d,a,x[k+10],S34,0xBEBFBC70);
+        a=HH(a,b,c,d,x[k+13],S31,0x289B7EC6);
+        d=HH(d,a,b,c,x[k+0], S32,0xEAA127FA);
+        c=HH(c,d,a,b,x[k+3], S33,0xD4EF3085);
+        b=HH(b,c,d,a,x[k+6], S34,0x4881D05);
+        a=HH(a,b,c,d,x[k+9], S31,0xD9D4D039);
+        d=HH(d,a,b,c,x[k+12],S32,0xE6DB99E5);
+        c=HH(c,d,a,b,x[k+15],S33,0x1FA27CF8);
+        b=HH(b,c,d,a,x[k+2], S34,0xC4AC5665);
+        a=II(a,b,c,d,x[k+0], S41,0xF4292244);
+        d=II(d,a,b,c,x[k+7], S42,0x432AFF97);
+        c=II(c,d,a,b,x[k+14],S43,0xAB9423A7);
+        b=II(b,c,d,a,x[k+5], S44,0xFC93A039);
+        a=II(a,b,c,d,x[k+12],S41,0x655B59C3);
+        d=II(d,a,b,c,x[k+3], S42,0x8F0CCC92);
+        c=II(c,d,a,b,x[k+10],S43,0xFFEFF47D);
+        b=II(b,c,d,a,x[k+1], S44,0x85845DD1);
+        a=II(a,b,c,d,x[k+8], S41,0x6FA87E4F);
+        d=II(d,a,b,c,x[k+15],S42,0xFE2CE6E0);
+        c=II(c,d,a,b,x[k+6], S43,0xA3014314);
+        b=II(b,c,d,a,x[k+13],S44,0x4E0811A1);
+        a=II(a,b,c,d,x[k+4], S41,0xF7537E82);
+        d=II(d,a,b,c,x[k+11],S42,0xBD3AF235);
+        c=II(c,d,a,b,x[k+2], S43,0x2AD7D2BB);
+        b=II(b,c,d,a,x[k+9], S44,0xEB86D391);
+        a=AddUnsigned(a,AA);
+        b=AddUnsigned(b,BB);
+        c=AddUnsigned(c,CC);
+        d=AddUnsigned(d,DD);
+      }
+      var temp = WordToHex(a)+WordToHex(b)+WordToHex(c)+WordToHex(d);
+      return temp.toLowerCase();
+    }
+
+    const validKeyHash = "397311d83eb42c3cfc42fefa49092e4c"; 
+
+    const keyInput = document.getElementById("keyInput");
+    const hexInput = document.getElementById("hexInput");
+    const convertBtn = document.getElementById("convertBtn");
+    const output = document.getElementById("output");
+    const errorMsg = document.getElementById("errorMsg");
+    const detectorResult = document.getElementById("detectorResult");
+
+    // Enable input and button only if key matches
+    keyInput.addEventListener("input", () => {
+      const enteredKey = keyInput.value.trim();
+      if (enteredKey.length === 0) {
+        errorMsg.textContent = "";
+        hexInput.disabled = true;
+        convertBtn.disabled = true;
+        output.textContent = "";
+        detectorResult.textContent = "";
+        return;
+      }
+      const enteredHash = md5(enteredKey);
+      if (enteredHash === validKeyHash) {
+        errorMsg.textContent = "";
+        hexInput.disabled = false;
+        convertBtn.disabled = false;
+      } else {
+        hexInput.disabled = true;
+        convertBtn.disabled = true;
+        output.textContent = "";
+        detectorResult.textContent = "";
+        errorMsg.textContent = "Invalid Key. Please enter the correct access key.";
+      }
+    });
 
     function isValidHex(hex) {
       return /^[0-9a-fA-F\s]*$/.test(hex);
     }
 
     function sanitizeAscii(str) {
-      let output = '';
+      let output = "";
       for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);
         if (
           (code >= 32 && code <= 126) || // printable ASCII
-          code === 10 ||  // newline
-          code === 13 ||  // carriage return
-          code === 9      // tab
+          code === 10 || // newline
+          code === 13 || // carriage return
+          code === 9 // tab
         ) {
           output += str.charAt(i);
         } else {
-          output += ' '; // replace weird chars with space
+          output += " "; // replace weird chars with space
         }
       }
       return output;
     }
 
     function hexToAscii(hex) {
-      hex = hex.replace(/\s+/g, '');
-      let asciiStr = '';
+      hex = hex.replace(/\s+/g, "");
+      let asciiStr = "";
       for (let i = 0; i < hex.length; i += 2) {
         if (i + 2 > hex.length) {
-          throw new Error('Hex string has uneven length');
+          throw new Error("Hex string has uneven length");
         }
         const byte = hex.substr(i, 2);
         asciiStr += String.fromCharCode(parseInt(byte, 16));
@@ -205,7 +505,6 @@
       const idx = lowerText.indexOf(lowerKeyword);
       if (idx === -1) return null;
 
-      // Choose layers based on keyword, map each to descriptive names
       let layers = [];
       let layerNames = {};
       if (keyword === "Grail_Sanctum") {
@@ -235,7 +534,6 @@
 
       const afterText = lowerText.slice(idx + lowerKeyword.length);
 
-      // Find earliest occurring layer in afterText
       let earliestIndex = Infinity;
       let foundLayer = null;
       for (const layer of layers) {
@@ -253,7 +551,7 @@
     }
 
     function detectTextType(text) {
-      if (!text) return 'Empty text';
+      if (!text) return "Empty text";
 
       const keywords = ["Knight-Captain", "High-Priest", "Basilisk-Rider", "Grail_Sanctum", "Arch-Mage", "Construct"];
       let detectedMessages = [];
@@ -283,19 +581,18 @@
       }
 
       if (detectedMessages.length > 0) {
-        return detectedMessages.join('\n');
+        return detectedMessages.join("\n");
       }
 
-      // Fallback to previous simple keyword detection and heuristics
       const keywordsSimple = [
-        { word: 'error', message: 'Error found in text!' },
-        { word: 'warning', message: 'Warning detected in text!' },
-        { word: 'success', message: 'Success message found!' },
-        { word: 'fail', message: 'Failure message detected!' },
-        { word: 'alert', message: 'Alert found in text!' },
-        { word: 'info', message: 'Informational message detected.' },
-        { word: 'done', message: 'Completion confirmed in text.' },
-        { word: 'hello', message: 'Greeting detected in text :)' }
+        { word: "error", message: "Error found in text!" },
+        { word: "warning", message: "Warning detected in text!" },
+        { word: "success", message: "Success message found!" },
+        { word: "fail", message: "Failure message detected!" },
+        { word: "alert", message: "Alert found in text!" },
+        { word: "info", message: "Informational message detected." },
+        { word: "done", message: "Completion confirmed in text." },
+        { word: "hello", message: "Greeting detected in text :)" },
       ];
 
       const lowerText = text.toLowerCase();
@@ -307,26 +604,26 @@
 
       const printableAscii = /^[\x09\x0A\x0D\x20-\x7E]*$/;
       if (!printableAscii.test(text)) {
-        return 'Non-printable or binary-like data detected';
+        return "Non-printable or binary-like data detected";
       }
 
       const alphaSpace = /^[a-zA-Z\s,.'!?-]*$/;
       if (alphaSpace.test(text) && text.trim().length > 0) {
-        return 'Likely plain English text';
+        return "Likely plain English text";
       }
 
       if (/^[0-9a-fA-F\s]+$/.test(text) && text.length > 10) {
-        return 'Probably still hex or encoded data';
+        return "Probably still hex or encoded data";
       }
 
       try {
         const jsonCandidate = text.trim();
         if (
-          (jsonCandidate.startsWith('{') && jsonCandidate.endsWith('}')) ||
-          (jsonCandidate.startsWith('[') && jsonCandidate.endsWith(']'))
+          (jsonCandidate.startsWith("{") && jsonCandidate.endsWith("}")) ||
+          (jsonCandidate.startsWith("[") && jsonCandidate.endsWith("]"))
         ) {
           JSON.parse(jsonCandidate);
-          return 'Looks like JSON text';
+          return "Looks like JSON text";
         }
       } catch {
         // Not JSON
@@ -334,33 +631,34 @@
 
       const digitsSpaces = /^[0-9\s+()-]*$/;
       if (digitsSpaces.test(text)) {
-        return 'Likely numeric or phone number text';
+        return "Likely numeric or phone number text";
       }
 
-      return 'Unclassified text content';
+      return "Unclassified text content";
     }
 
-    convertBtn.addEventListener('click', () => {
+    convertBtn.addEventListener("click", () => {
       const hexValue = hexInput.value.trim();
-      errorMsg.textContent = '';
-      output.textContent = '';
-      detectorResult.textContent = 'Detecting...';
+      errorMsg.textContent = "";
+      output.textContent = "";
+      detectorResult.textContent = "Detecting...";
 
       if (!hexValue) {
-        errorMsg.textContent = 'Please enter a hexadecimal string.';
-        detectorResult.textContent = '';
+        errorMsg.textContent = "Please enter a hexadecimal string.";
+        detectorResult.textContent = "";
         return;
       }
       if (!isValidHex(hexValue)) {
-        errorMsg.textContent = 'Input contains invalid characters. Only hexadecimal digits (0-9, a-f) and spaces are allowed.';
-        detectorResult.textContent = '';
+        errorMsg.textContent =
+          "Input contains invalid characters. Only hexadecimal digits (0-9, a-f) and spaces are allowed.";
+        detectorResult.textContent = "";
         return;
       }
 
-      const cleanHex = hexValue.replace(/\s+/g, '');
+      const cleanHex = hexValue.replace(/\s+/g, "");
       if (cleanHex.length % 2 !== 0) {
-        errorMsg.textContent = 'Hex string length should be even.';
-        detectorResult.textContent = '';
+        errorMsg.textContent = "Hex string length should be even.";
+        detectorResult.textContent = "";
         return;
       }
 
@@ -370,10 +668,9 @@
         detectorResult.textContent = detectTextType(ascii);
       } catch (e) {
         errorMsg.textContent = e.message;
-        detectorResult.textContent = '';
+        detectorResult.textContent = "";
       }
     });
   </script>
 </body>
 </html>
-
