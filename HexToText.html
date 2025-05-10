@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Hex to ASCII Converter with Customized Keyword & Layer Detection</title>
+  <style>
+    /* Reset some basic styles */
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 600px;
+      min-height: 100vh;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    h1 {
+      margin-bottom: 10px;
+      font-weight: 700;
+      font-size: 1.8rem;
+      text-align: center;
+      letter-spacing: 1.2px;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.4);
+    }
+    label {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+    textarea {
+      width: 100%;
+      height: 100px;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      resize: vertical;
+      font-family: monospace;
+      font-size: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      color: #e0e0e0;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.25);
+      transition: background-color 0.3s ease;
+      margin-bottom: 12px;
+    }
+    textarea:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.2);
+    }
+    button {
+      margin-top: 5px;
+      padding: 12px 20px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #667eea;
+      background: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(102,126,234,0.6);
+      transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+      width: 100%;
+    }
+    button:hover,
+    button:focus {
+      background: #5562d9;
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(85,98,217,0.8);
+      outline: none;
+    }
+    .output {
+      margin-top: 20px;
+      width: 100%;
+      min-height: 100px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 1rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+      user-select: text;
+      color: #f0f0f0;
+      margin-bottom: 15px;
+    }
+    .error {
+      margin-top: 5px;
+      color: #ff6b6b;
+      font-weight: 700;
+      text-align: center;
+      min-height: 1.2em;
+    }
+    .detector-label {
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      margin-top: 15px;
+      display: block;
+    }
+    .detector-result {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 1rem;
+      color: #d0ffd0;
+      box-shadow: inset 0 0 10px rgba(0, 100, 0, 0.5);
+      min-height: 40px;
+      user-select: none;
+      white-space: pre-wrap;
+    }
+    @media (max-width: 400px) {
+      body {
+        padding: 15px 10px;
+        max-width: 100%;
+      }
+      textarea {
+        height: 80px;
+        font-size: 0.9rem;
+      }
+      button {
+        font-size: 0.9rem;
+      }
+      .output {
+        font-size: 0.9rem;
+      }
+      .detector-result {
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Brand of Sacrifice Golden Ticket</h1>
+  <label for="hexInput">Insertar HEX:</label>
+  <textarea id="hexInput" placeholder="Ejemplo: 41 56 41 5F 54 45 4D 50 4C 45 5F 53 54 41 52 54 5F 46 69 72 73 74 5F 4C 65 76 65 6C 5F 30 31 00 00 A0 40 00 00 20 C2 00 00 A0 40 00 00 00 00 00 01 00 00 00 08 4C 61 79 65 72 5F 30 33 0F 69 6E 73 74 61 6E 63 65 73 6C 6F 74 5F 30 31 1A 41 56 41 5F 54 45 4D"></textarea>
+
+  <button id="convertBtn">Convertir</button>
+  <div id="errorMsg" class="error" role="alert" aria-live="assertive"></div>
+
+  <label class="detector-label" for="detectorResult">Cofres:</label>
+  <div id="detectorResult" class="detector-result" aria-live="polite" aria-atomic="true">Aun no hay resultados.</div>
+
+  <label class="detector-label" for="detectorResult">Etc..:</label>
+  <div id="output" class="output" aria-live="polite" aria-label="ASCII output"></div>
+
+  
+
+  <script>
+    const hexInput = document.getElementById('hexInput');
+    const convertBtn = document.getElementById('convertBtn');
+    const output = document.getElementById('output');
+    const errorMsg = document.getElementById('errorMsg');
+    const detectorResult = document.getElementById('detectorResult');
+
+    function isValidHex(hex) {
+      return /^[0-9a-fA-F\s]*$/.test(hex);
+    }
+
+    function sanitizeAscii(str) {
+      let output = '';
+      for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (
+          (code >= 32 && code <= 126) || // printable ASCII
+          code === 10 ||  // newline
+          code === 13 ||  // carriage return
+          code === 9      // tab
+        ) {
+          output += str.charAt(i);
+        } else {
+          output += ' '; // replace weird chars with space
+        }
+      }
+      return output;
+    }
+
+    function hexToAscii(hex) {
+      hex = hex.replace(/\s+/g, '');
+      let asciiStr = '';
+      for (let i = 0; i < hex.length; i += 2) {
+        if (i + 2 > hex.length) {
+          throw new Error('Hex string has uneven length');
+        }
+        const byte = hex.substr(i, 2);
+        asciiStr += String.fromCharCode(parseInt(byte, 16));
+      }
+      return sanitizeAscii(asciiStr);
+    }
+
+    function detectKeywordLayer(text, keyword) {
+      const lowerText = text.toLowerCase();
+      const lowerKeyword = keyword.toLowerCase();
+
+      const idx = lowerText.indexOf(lowerKeyword);
+      if (idx === -1) return null;
+
+      // Choose layers based on keyword, map each to descriptive names
+      let layers = [];
+      let layerNames = {};
+      if (keyword === "Grail_Sanctum") {
+        layers = ["layer_05", "layer_04", "layer_02"];
+        layerNames = {
+          "LAYER_05": "Doble Morado",
+          "LAYER_04": "Un Dorado",
+          "LAYER_02": "Doble Dorado"
+        };
+      } else if(keyword === "Construct") {
+        layers = ["layer_06", "layer_07", "layer_09", "layer_08"];
+        layerNames = {
+          "LAYER_06": "Doble Dorado",
+          "LAYER_07": "Un Dorado",
+          "LAYER_09": "Doble Morado",
+          "LAYER_08": "Un Morado"
+        };
+      } else {
+        layers = ["layer_08", "layer_09", "layer_10", "layer_11"];
+        layerNames = {
+          "LAYER_08": "Doble Dorado",
+          "LAYER_09": "Un Dorado",
+          "LAYER_10": "Un Morado",
+          "LAYER_11": "Doble Morado"
+        };
+      }
+
+      const afterText = lowerText.slice(idx + lowerKeyword.length);
+
+      // Find earliest occurring layer in afterText
+      let earliestIndex = Infinity;
+      let foundLayer = null;
+      for (const layer of layers) {
+        const pos = afterText.indexOf(layer);
+        if (pos !== -1 && pos < earliestIndex) {
+          earliestIndex = pos;
+          foundLayer = layer.toUpperCase();
+        }
+      }
+
+      if (foundLayer !== null) {
+        return layerNames[foundLayer] || foundLayer;
+      }
+      return "None";
+    }
+
+    function detectTextType(text) {
+      if (!text) return 'Empty text';
+
+      const keywords = ["Knight-Captain", "High-Priest", "Basilisk-Rider", "Grail_Sanctum", "Arch-Mage", "Construct"];
+      let detectedMessages = [];
+      let segundoPiso = true;
+      for (const kw of keywords) {
+        const layer = detectKeywordLayer(text, kw);
+        if (layer !== null) {
+          //detectedMessages.push(`Jefe '${kw}': Layer detected -> ${layer}`);
+          if (kw === "Knight-Captain") {
+            detectedMessages.push(`Keyword '${kw}' (Tio borracho): Layer detected -> ${layer}`);
+          } else if (kw === "High-Priest") {
+            detectedMessages.push(`Keyword '${kw}' (Suicida): Layer detected -> ${layer}`);
+          } else if (kw === "Basilisk-Rider") {
+            detectedMessages.push(`Keyword '${kw}' (Basilisco): Layer detected -> ${layer}`);
+          } else if (kw === "Grail_Sanctum") {
+            detectedMessages.push(`Keyword '${kw}' (Final): Layer detected -> ${layer}`);
+            segundoPiso = false;
+          } else if (kw === "Arch-Mage") {
+            detectedMessages.push(`Keyword '${kw}' (Bailarina): Layer detected -> ${layer}`);
+          } else if (kw === "Construct") {
+            detectedMessages.push(`Keyword '${kw}' (Constructor): Layer detected -> ${layer}`);
+          }
+        }
+      }
+      if(segundoPiso){
+            detectedMessages.push("Segundo Piso...")
+      }
+
+      if (detectedMessages.length > 0) {
+        return detectedMessages.join('\n');
+      }
+
+      // Fallback to previous simple keyword detection and heuristics
+      const keywordsSimple = [
+        { word: 'error', message: 'Error found in text!' },
+        { word: 'warning', message: 'Warning detected in text!' },
+        { word: 'success', message: 'Success message found!' },
+        { word: 'fail', message: 'Failure message detected!' },
+        { word: 'alert', message: 'Alert found in text!' },
+        { word: 'info', message: 'Informational message detected.' },
+        { word: 'done', message: 'Completion confirmed in text.' },
+        { word: 'hello', message: 'Greeting detected in text :)' }
+      ];
+
+      const lowerText = text.toLowerCase();
+      for (const keyword of keywordsSimple) {
+        if (lowerText.includes(keyword.word)) {
+          return keyword.message;
+        }
+      }
+
+      const printableAscii = /^[\x09\x0A\x0D\x20-\x7E]*$/;
+      if (!printableAscii.test(text)) {
+        return 'Non-printable or binary-like data detected';
+      }
+
+      const alphaSpace = /^[a-zA-Z\s,.'!?-]*$/;
+      if (alphaSpace.test(text) && text.trim().length > 0) {
+        return 'Likely plain English text';
+      }
+
+      if (/^[0-9a-fA-F\s]+$/.test(text) && text.length > 10) {
+        return 'Probably still hex or encoded data';
+      }
+
+      try {
+        const jsonCandidate = text.trim();
+        if (
+          (jsonCandidate.startsWith('{') && jsonCandidate.endsWith('}')) ||
+          (jsonCandidate.startsWith('[') && jsonCandidate.endsWith(']'))
+        ) {
+          JSON.parse(jsonCandidate);
+          return 'Looks like JSON text';
+        }
+      } catch {
+        // Not JSON
+      }
+
+      const digitsSpaces = /^[0-9\s+()-]*$/;
+      if (digitsSpaces.test(text)) {
+        return 'Likely numeric or phone number text';
+      }
+
+      return 'Unclassified text content';
+    }
+
+    convertBtn.addEventListener('click', () => {
+      const hexValue = hexInput.value.trim();
+      errorMsg.textContent = '';
+      output.textContent = '';
+      detectorResult.textContent = 'Detecting...';
+
+      if (!hexValue) {
+        errorMsg.textContent = 'Please enter a hexadecimal string.';
+        detectorResult.textContent = '';
+        return;
+      }
+      if (!isValidHex(hexValue)) {
+        errorMsg.textContent = 'Input contains invalid characters. Only hexadecimal digits (0-9, a-f) and spaces are allowed.';
+        detectorResult.textContent = '';
+        return;
+      }
+
+      const cleanHex = hexValue.replace(/\s+/g, '');
+      if (cleanHex.length % 2 !== 0) {
+        errorMsg.textContent = 'Hex string length should be even.';
+        detectorResult.textContent = '';
+        return;
+      }
+
+      try {
+        const ascii = hexToAscii(cleanHex);
+        output.textContent = ascii;
+        detectorResult.textContent = detectTextType(ascii);
+      } catch (e) {
+        errorMsg.textContent = e.message;
+        detectorResult.textContent = '';
+      }
+    });
+  </script>
+</body>
+</html>
+
