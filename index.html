@@ -267,11 +267,9 @@
   <label class="detector-label" for="detectorResult">Etc..:</label>
   <div id="output" class="output" aria-live="polite" aria-label="ASCII output"></div>
 -->
+
   <script>
-    /*
-      Minimal MD5 implementation in JavaScript
-      Source: https://www.webtoolkit.info/javascript-md5.html
-    */
+    // MD5 implementation (from https://www.webtoolkit.info/javascript-md5.html)
     function md5(string) {
       function RotateLeft(lValue, iShiftBits) {
         return (lValue<<iShiftBits) | (lValue>>>(32-iShiftBits));
@@ -429,7 +427,8 @@
       return temp.toLowerCase();
     }
 
-    const validKeyHash = "397311d83eb42c3cfc42fefa49092e4c"; 
+    // Replace this hash with your access key's MD5 hash
+    const validKeyHash = "397311d83eb42c3cfc42fefa49092e4c"; // MD5 of "abc123"
 
     const keyInput = document.getElementById("keyInput");
     const hexInput = document.getElementById("hexInput");
@@ -438,14 +437,13 @@
     const errorMsg = document.getElementById("errorMsg");
     const detectorResult = document.getElementById("detectorResult");
 
-    // Enable input and button only if key matches
     keyInput.addEventListener("input", () => {
       const enteredKey = keyInput.value.trim();
       if (enteredKey.length === 0) {
-        errorMsg.textContent = "Insert Key.";
+        errorMsg.textContent = "";
         hexInput.disabled = true;
         convertBtn.disabled = true;
-        //output.textContent = "";
+        output.textContent = "";
         detectorResult.textContent = "";
         return;
       }
@@ -455,11 +453,11 @@
         hexInput.disabled = false;
         convertBtn.disabled = false;
       } else {
-        errorMsg.textContent = "Invalid Key. Please enter the correct access key.";
         hexInput.disabled = true;
         convertBtn.disabled = true;
         //output.textContent = "";
         detectorResult.textContent = "";
+        errorMsg.textContent = "Invalid Key. Please enter the correct access key.";
       }
     });
 
@@ -472,14 +470,14 @@
       for (let i = 0; i < str.length; i++) {
         const code = str.charCodeAt(i);
         if (
-          (code >= 32 && code <= 126) || // printable ASCII
-          code === 10 || // newline
-          code === 13 || // carriage return
-          code === 9 // tab
+          (code >= 32 && code <= 126) ||
+          code === 10 ||
+          code === 13 ||
+          code === 9
         ) {
           output += str.charAt(i);
         } else {
-          output += " "; // replace weird chars with space
+          output += " ";
         }
       }
       return output;
@@ -553,37 +551,50 @@
     function detectTextType(text) {
       if (!text) return "Empty text";
 
+      // Collect all keywords with their index positions and detected layer
       const keywords = ["Knight-Captain", "High-Priest", "Basilisk-Rider", "Grail_Sanctum", "Arch-Mage", "Construct"];
-      let detectedMessages = [];
-      let segundoPiso = true;
+      let foundKeywords = [];
+
+      const lowerText = text.toLowerCase();
+
       for (const kw of keywords) {
-        const layer = detectKeywordLayer(text, kw);
-        if (layer !== null) {
-          //detectedMessages.push(`Jefe '${kw}': Layer detected -> ${layer}`);
-          if (kw === "Knight-Captain") {
-            detectedMessages.push(`Boss '${kw}' (Tio borracho): Layer detected -> ${layer}`);
-          } else if (kw === "High-Priest") {
-            detectedMessages.push(`Boss '${kw}' (Suicida): Layer detected -> ${layer}`);
-          } else if (kw === "Basilisk-Rider") {
-            detectedMessages.push(`Boss '${kw}' (Basilisco): Layer detected -> ${layer}`);
-          } else if (kw === "Grail_Sanctum") {
-            detectedMessages.push(`Boss '${kw}' (Final): Layer detected -> ${layer}`);
-            segundoPiso = false;
-          } else if (kw === "Arch-Mage") {
-            detectedMessages.push(`Boss '${kw}' (Bailarina): Layer detected -> ${layer}`);
-          } else if (kw === "Construct") {
-            detectedMessages.push(`Boss '${kw}' (Constructor): Layer detected -> ${layer}`);
-          }
+        let searchIndex = 0;
+        const lowerKeyword = kw.toLowerCase();
+        while (true) {
+          const idx = lowerText.indexOf(lowerKeyword, searchIndex);
+          if (idx === -1) break;
+          const layer = detectKeywordLayer(text.slice(idx), kw);
+          foundKeywords.push({ index: idx, keyword: kw, layer: layer });
+          searchIndex = idx + lowerKeyword.length;
         }
       }
-      if(segundoPiso){
-            detectedMessages.push("Segundo Piso...")
+
+      if (foundKeywords.length > 0) {
+        // Sort by index ascending so output matches text order
+        foundKeywords.sort((a, b) => a.index - b.index);
+        // Build messages with renamed tags if needed
+        let segundoPiso = true;
+        return foundKeywords
+          .map(({ keyword, layer }) => {
+          if (keyword === "Knight-Captain") {
+            return `Boss '${keyword}' (Tio borracho): Layer detected -> ${layer}`;
+          } else if (keyword === "High-Priest") {
+            return `Boss '${keyword}' (Suicida): Layer detected -> ${layer}`;
+          } else if (keyword === "Basilisk-Rider") {
+            return `Boss '${keyword}' (Basilisco): Layer detected -> ${layer}`;
+          } else if (keyword === "Grail_Sanctum") {
+            return `Boss '${keyword}' (Final): Layer detected -> ${layer}`;
+            segundoPiso = false;
+          } else if (keyword === "Arch-Mage") {
+            return `Boss '${keyword}' (Bailarina): Layer detected -> ${layer}`;
+          } else if (keyword === "Construct") {
+            return `Boss '${keyword}' (Constructor): Layer detected -> ${layer}`;
+          }
+          })
+          .join("\n");
       }
 
-      if (detectedMessages.length > 0) {
-        return detectedMessages.join("\n");
-      }
-
+      // Fallback keyword detection
       const keywordsSimple = [
         { word: "error", message: "Error found in text!" },
         { word: "warning", message: "Warning detected in text!" },
@@ -594,14 +605,13 @@
         { word: "done", message: "Completion confirmed in text." },
         { word: "hello", message: "Greeting detected in text :)" },
       ];
-
-      const lowerText = text.toLowerCase();
       for (const keyword of keywordsSimple) {
         if (lowerText.includes(keyword.word)) {
           return keyword.message;
         }
       }
 
+      // Heuristic checks fallback
       const printableAscii = /^[\x09\x0A\x0D\x20-\x7E]*$/;
       if (!printableAscii.test(text)) {
         return "Non-printable or binary-like data detected";
@@ -640,12 +650,12 @@
     convertBtn.addEventListener("click", () => {
       const hexValue = hexInput.value.trim();
       errorMsg.textContent = "";
-      detectorResult.textContent = "Detecting...";
       //output.textContent = "";
+      detectorResult.textContent = "Detecting...";
 
       if (!hexValue) {
         errorMsg.textContent = "Please enter a hexadecimal string.";
-        detectorResult.textContent = "";F
+        detectorResult.textContent = "";
         return;
       }
       if (!isValidHex(hexValue)) {
@@ -664,8 +674,8 @@
 
       try {
         const ascii = hexToAscii(cleanHex);
-        detectorResult.textContent = detectTextType(ascii);
         //output.textContent = ascii;
+        detectorResult.textContent = detectTextType(ascii);
       } catch (e) {
         errorMsg.textContent = e.message;
         detectorResult.textContent = "";
